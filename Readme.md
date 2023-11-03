@@ -5,18 +5,18 @@ It will control the Photovoltaic power generation by setting the limit to a valu
 
 ## Required sensors / entities
 
-<u>GridPowerMeters:</u>
+### GridPowerMeters:
 Sensors measuring Grid import or export e.g. all 3 phases in W.
 All power meters will be summed up to define the total grid import or export.
 
-<u>PVPowerMeters:</u>
+### PVPowerMeters:
 Sensors measuring PV Generation in W
 If sevaral Sensors are selected, those will be summed up.
 
-<u>NonPersistantLimit</u>:
+### NonPersistantLimit:
 Entity to set the non persistant absolut limit in W. It should be the non persistant limit to avoid too many writes towards the flash memory.
 
-<u>InverterOnlineStatus</u>
+### InverterOnlineStatus:
 Entity indicating if the inverter is available ('On' -> available)
 
 
