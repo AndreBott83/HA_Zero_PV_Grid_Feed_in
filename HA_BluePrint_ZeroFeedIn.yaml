@@ -1,0 +1,113 @@
+blueprint:
+  name: Control PV Limit to avoid exporting to the grid
+  description: > 
+    # Zero Feed In Automation
+    **Version: 0.0.1**
+    # Summary
+    This automation will react on changes of energy imported or exported from the grid.
+    It will control the Photovoltaic power generation by setting the limit to a value avoiding exporting to the grid
+    
+    ## Required sensors / entities
+    
+    <u>GridPowerMeters:</u>
+    Sensors measuring Grid import or export e.g. all 3 phases in W.
+    All power meters will be summed up to define the total grid import or export.
+    
+    <u>PVPowerMeters:</u>
+    Sensors measuring PV Generation in W
+    If sevaral Sensors are selected, those will be summed up.
+    
+    <u>NonPersistantLimit</u>:
+    Entity to set the non persistant absolut limit in W. It should be the non persistant limit to avoid too many writes towards the flash memory.
+    
+    <u>InverterOnlineStatus</u>
+    Entity indicating if the inverter is available ('On' -> available)
+    
+    
+    Kudos for the simple algorithm and idea go to:
+    https://selbstbau-pv.de/wissensbasis/nulleinspeisung-hoymiles-hm-1500-mit-opendtu-python-steuerung/
+    
+    # Change log
+    Check the github repository: https://github.com/AndreBott83/HA_Zero_PV_Grid_Feed_in
+  domain: automation
+  input:
+    MaxInverterPower:
+      name: Inverter upper limit
+      description: Define the maximum power the inverter can deliver in W
+      default: 1600
+      selector:
+        number:
+          min: 0.0
+          max: 5000.0
+          unit_of_measurement: 'W'
+          mode: box
+          step: 1.0
+    MinInverterPower:
+      name: Inverter lower limit
+      description: Define the minimum power the inverter should deliver in W
+      default: 600
+      selector:
+        number:
+          min: 0.0
+          max: 5000.0
+          unit_of_measurement: 'W'
+          mode: box
+          step: 1.0
+    GridPowerMeters:
+      name: Sensors measuring Grid import or export e.g. all 3 phases in W
+      description: All power meters will be summed up to define the total grid import or export. Choose e.g. all 3 sensors measuring L1, L2 & L3 in W
+      selector:
+        entity:
+          device_class: power
+          multiple: true
+    PVPowerMeters:
+      name: Sensors measuring PV Generation in W
+      description: Choose the sensor showing the current produced PV Power
+      selector:
+        entity:
+          device_class: power
+          multiple: true
+    NonPersistantLimit:
+      name: Entity to set the non persistant absolut limit in W
+      description: Choose the entity to define the limit of PV generation in W
+      selector:
+        entity:
+    InverterOnlineStatus:
+      name: Entity that shows if the inverter is online
+      description: Choose the entity showing the inverters is reachable
+      selector:
+        entity:
+#neue_Leistung = letzte_Verbrauchsmessung + vorletzte_angeforderte_Leistung???
+
+variables:
+  lowerlimit: !input 'MinInverterPower'
+  upperlimit: !input 'MaxInverterPower'
+  currentlimit: !input 'NonPersistantLimit'
+  PVPowerMetersvar: !input 'PVPowerMeters'
+  GridPowerMetersvar: !input 'GridPowerMeters'
+  pvgeneration: "{% set pvgeneration = expand(PVPowerMetersvar) | map(attribute='state') | map('float') | sum %} {{pvgeneration}}"
+  gridsum: "{% set gridconsumption = expand(GridPowerMetersvar) | map(attribute='state') | map('float') | sum %} {{gridconsumption}}"
+  inverteronline: !input 'InverterOnlineStatus'
+  new_setpoint: "{% set setpoint = gridsum + states(currentlimit)|float -5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}"
+ 
+trigger:
+- platform: state
+  entity_id: !input 'GridPowerMeters'
+  
+#handle cases wher e gridsum not a number (not reachable) or setpoint not a valid number
+condition:
+- condition: template
+  value_template: '{{ states(inverteronline) == "on"}}'
+- condition: template
+  value_template: '{{(new_setpoint - states(currentlimit)|float)|abs > 5}}'
+action:
+  - service: logbook.log
+    data_template:
+      name: "PVSetpoint:"
+      message: "Gridsum: {{gridsum}} W & PVGeneration: {{pvgeneration}} W -> new_setpoint: {{new_setpoint}} W"
+  - service: number.set_value
+    target:
+      entity_id: !input 'NonPersistantLimit'
+    data:
+      value: "{{new_setpoint | round(0)}}"
+mode: single
