@@ -104,6 +104,7 @@ action:
   - service: logbook.log
     data_template:
       name: "PVSetpoint:"
+      entity_id: currentlimit
       message: "Gridsum: {{gridsum}} W & PVGeneration: {{pvgeneration}} W -> new_setpoint: {{new_setpoint}} W"
   - service: number.set_value
     target:
