@@ -24,4 +24,5 @@ Kudos for the simple algorithm and idea go to:
 https://selbstbau-pv.de/wissensbasis/nulleinspeisung-hoymiles-hm-1500-mit-opendtu-python-steuerung/
 
 # Change log
+**Version: 0.0.1** - Improve Error handling in case sensors are unavailable
 **Version: 0.0.1** - Initial commit

@@ -2,7 +2,7 @@ blueprint:
   name: Control PV Limit to avoid exporting to the grid
   description: > 
     # Zero Feed In Automation
-    **Version: 0.0.1**
+    **Version: 0.0.2**
     # Summary
     This automation will react on changes of energy imported or exported from the grid.
     It will control the Photovoltaic power generation by setting the limit to a value avoiding exporting to the grid
@@ -85,10 +85,10 @@ variables:
   currentlimit: !input 'NonPersistantLimit'
   PVPowerMetersvar: !input 'PVPowerMeters'
   GridPowerMetersvar: !input 'GridPowerMeters'
-  pvgeneration: "{% set pvgeneration = expand(PVPowerMetersvar) | map(attribute='state') | map('float') | sum %} {{pvgeneration}}"
-  gridsum: "{% set gridconsumption = expand(GridPowerMetersvar) | map(attribute='state') | map('float') | sum %} {{gridconsumption}}"
+  pvgeneration: "{% set pvgeneration = expand(PVPowerMetersvar) | map(attribute='state') |map('float',default=0) | sum %} {{pvgeneration}}"
+  gridsum: "{% set gridconsumption = expand(GridPowerMetersvar) | map(attribute='state') |map('float',default=0) | sum %} {{gridconsumption}}"
   inverteronline: !input 'InverterOnlineStatus'
-  new_setpoint: "{% set setpoint = gridsum + states(currentlimit)|float -5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}"
+  new_setpoint: "{% set setpoint = gridsum + states(currentlimit)|float(0) -5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}"
  
 trigger:
 - platform: state
@@ -99,12 +99,11 @@ condition:
 - condition: template
   value_template: '{{ states(inverteronline) == "on"}}'
 - condition: template
-  value_template: '{{(new_setpoint - states(currentlimit)|float)|abs > 5}}'
+  value_template: '{{(new_setpoint - states(currentlimit)|float(0))|abs > 5}}'
 action:
   - service: logbook.log
     data_template:
       name: "PVSetpoint:"
-      entity_id: currentlimit
       message: "Gridsum: {{gridsum}} W & PVGeneration: {{pvgeneration}} W -> new_setpoint: {{new_setpoint}} W"
   - service: number.set_value
     target:
