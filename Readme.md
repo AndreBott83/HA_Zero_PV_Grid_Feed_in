@@ -25,5 +25,7 @@ https://selbstbau-pv.de/wissensbasis/nulleinspeisung-hoymiles-hm-1500-mit-opendt
 
 # Change log
 **Version: 0.0.3** - Add parameter to define, at which feed in power the controller will get active. Also add parameter to select the control mode
+
 **Version: 0.0.2** - Improve Error handling in case sensors are unavailable
+
 **Version: 0.0.1** - Initial commit
