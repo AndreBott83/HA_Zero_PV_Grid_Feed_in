@@ -2,7 +2,8 @@ blueprint:
   name: Control PV Limit to avoid exporting to the grid
   description: > 
     # Zero Feed In Automation
-    **Version: 0.0.2**
+    **Version: 0.0.3**
+    
     # Summary
     This automation will react on changes of energy imported or exported from the grid.
     It will control the Photovoltaic power generation by setting the limit to a value avoiding exporting to the grid
@@ -53,6 +54,26 @@ blueprint:
           unit_of_measurement: 'W'
           mode: box
           step: 1.0
+    AllowedFeedIn:
+      name: Number in W of grid feed that is accepted
+      description: Limitation of PV Generation will only be active if Number in W of grid feed that is higher than this number
+      default: 0
+      selector:
+        number:
+          min: 0.0
+          max: 5000.0          
+          unit_of_measurement: 'W'
+          mode: box
+          step: 1.0
+    ModeSelector:
+      name: Select Controll ModeSelector
+      description: 'Mode 1: smooth decrease of allowed generation. Mode 2: Hard Cut to zero feed in'
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
     GridPowerMeters:
       name: Sensors measuring Grid import or export e.g. all 3 phases in W
       description: All power meters will be summed up to define the total grid import or export. Choose e.g. all 3 sensors measuring L1, L2 & L3 in W
@@ -77,7 +98,6 @@ blueprint:
       description: Choose the entity showing the inverters is reachable
       selector:
         entity:
-#neue_Leistung = letzte_Verbrauchsmessung + vorletzte_angeforderte_Leistung???
 
 variables:
   lowerlimit: !input 'MinInverterPower'
@@ -85,16 +105,18 @@ variables:
   currentlimit: !input 'NonPersistantLimit'
   PVPowerMetersvar: !input 'PVPowerMeters'
   GridPowerMetersvar: !input 'GridPowerMeters'
+  ctlr_mode: !input 'ModeSelector'  
   pvgeneration: "{% set pvgeneration = expand(PVPowerMetersvar) | map(attribute='state') |map('float',default=0) | sum %} {{pvgeneration}}"
   gridsum: "{% set gridconsumption = expand(GridPowerMetersvar) | map(attribute='state') |map('float',default=0) | sum %} {{gridconsumption}}"
+  modifier: !input 'AllowedFeedIn'
+  modifier_setpoint: "{% if gridsum < 0 -%}{{modifier}} {% else -%} {{0}} {%- endif %}"
   inverteronline: !input 'InverterOnlineStatus'
-  new_setpoint: "{% set setpoint = gridsum + states(currentlimit)|float(0) -5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}"
- 
+  new_setpoint: "{% set setpoint = gridsum + modifier_setpoint|float(0) + states(currentlimit)|float(0) -5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}"
+  new_setpoint_mode2: '{% set setpoint = gridsum + modifier_setpoint|float(0) + pvgeneration + 5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}'
 trigger:
 - platform: state
   entity_id: !input 'GridPowerMeters'
-  
-#handle cases wher e gridsum not a number (not reachable) or setpoint not a valid number
+
 condition:
 - condition: template
   value_template: '{{ states(inverteronline) == "on"}}'
@@ -109,5 +131,5 @@ action:
     target:
       entity_id: !input 'NonPersistantLimit'
     data:
-      value: "{{new_setpoint | round(0)}}"
+      value: "{% if ctlr_mode == 1 -%}{{new_setpoint | round(0)}}{% elif ctlr_mode == 2 -%} {{new_setpoint_mode2 | round(0)}} {%- endif %}"
 mode: single
