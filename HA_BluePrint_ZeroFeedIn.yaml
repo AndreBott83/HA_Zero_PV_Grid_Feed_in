@@ -39,7 +39,7 @@ blueprint:
       selector:
         number:
           min: 5
-          max: 60
+          max: 120
           unit_of_measurement: 's'
           step: 5.0
     MaxInverterPower:
@@ -110,7 +110,7 @@ blueprint:
         entity:
 
 variables:
-  triggerinterval: !input TriggerInterval
+  triggerinterval: "{{TriggerInterval}}" 'TriggerInterval'
   lowerlimit: !input 'MinInverterPower'
   upperlimit: !input 'MaxInverterPower'
   currentlimit: !input 'NonPersistantLimit'
@@ -125,13 +125,17 @@ variables:
   new_setpoint: "{% set setpoint = gridsum + modifier_setpoint|float(0) + states(currentlimit)|float(0) -5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}"
   new_setpoint_mode2: '{% set setpoint = gridsum + modifier_setpoint|float(0) + pvgeneration + 5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}'
 trigger:
-  - platform: template 
-    value_template: "{{ now().second % states('triggerinterval')|int(2) == 0 }}"
+- platform: state
+  entity_id: !input 'GridPowerMeters'
 condition:
 - condition: template
   value_template: '{{ states(inverteronline) == "on"}}'
 - condition: template
   value_template: '{{(new_setpoint - states(currentlimit)|float(0))|abs > 5}}'
+- condition: template
+  value_template: |
+    {%- set last = state_attr(this.entity_id, 'last_triggered') %}
+    {{ last is not none and now() - last > timedelta(seconds={{triggerinterval}}) }}
 action:
   - service: logbook.log
     data_template:
