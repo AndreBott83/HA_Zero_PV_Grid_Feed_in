@@ -39,7 +39,7 @@ blueprint:
       selector:
         number:
           min: 5
-          max: 120
+          max: 60
           unit_of_measurement: 's'
           step: 5.0
     MaxInverterPower:
@@ -125,8 +125,8 @@ variables:
   new_setpoint: "{% set setpoint = gridsum + modifier_setpoint|float(0) + states(currentlimit)|float(0) -5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}"
   new_setpoint_mode2: '{% set setpoint = gridsum + modifier_setpoint|float(0) + pvgeneration + 5 %}{% if setpoint > upperlimit -%}{% set setpoint = upperlimit %}{% elif setpoint < lowerlimit %}{% set setpoint = lowerlimit %}{%- endif %}{{setpoint}}'
 trigger:
-- platform: time_pattern
-  seconds: "/{{triggerinterval}}"
+  - platform: template 
+    value_template: "{{ now().second % states('triggerinterval')|int(2) == 0 }}"
 condition:
 - condition: template
   value_template: '{{ states(inverteronline) == "on"}}'
