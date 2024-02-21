@@ -135,7 +135,7 @@ condition:
 - condition: template
   value_template: |
     {%- set last = state_attr(this.entity_id, 'last_triggered') %}
-    {{ last is not none and now() - last > timedelta(seconds={{triggerinterval}}) }}
+    {{ last is not none and now() - last > timedelta(seconds=triggerinterval) }}
 action:
   - service: logbook.log
     data_template:
