@@ -110,7 +110,7 @@ blueprint:
         entity:
 
 variables:
-  triggerinterval: "{{TriggerInterval}}" 'TriggerInterval'
+  triggerinterval: !input 'TriggerInterval'
   lowerlimit: !input 'MinInverterPower'
   upperlimit: !input 'MaxInverterPower'
   currentlimit: !input 'NonPersistantLimit'
