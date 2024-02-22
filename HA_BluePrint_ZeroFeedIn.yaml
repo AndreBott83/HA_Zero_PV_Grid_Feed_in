@@ -2,7 +2,7 @@ blueprint:
   name: Control PV Limit to avoid exporting to the grid
   description: > 
     # Zero Feed In Automation
-    **Version: 0.0.3**
+    **Version: 0.0.4**
     
     # Summary
     This automation will react on changes of energy imported or exported from the grid.
@@ -32,6 +32,16 @@ blueprint:
     Check the github repository: https://github.com/AndreBott83/HA_Zero_PV_Grid_Feed_in
   domain: automation
   input:
+    TriggerInterval:
+      name: Interval trigger
+      description: Interval of which the automation will be triggered and a limit could be set in seconds
+      default: 15
+      selector:
+        number:
+          min: 5
+          max: 120
+          unit_of_measurement: 's'
+          step: 5.0
     MaxInverterPower:
       name: Inverter upper limit
       description: Define the maximum power the inverter can deliver in W
@@ -100,6 +110,7 @@ blueprint:
         entity:
 
 variables:
+  triggerinterval: !input 'TriggerInterval'
   lowerlimit: !input 'MinInverterPower'
   upperlimit: !input 'MaxInverterPower'
   currentlimit: !input 'NonPersistantLimit'
@@ -116,10 +127,13 @@ variables:
 trigger:
 - platform: state
   entity_id: !input 'GridPowerMeters'
-
 condition:
 - condition: template
   value_template: '{{ states(inverteronline) == "on"}}'
+- condition: template
+  value_template: |
+    {%- set last = state_attr(this.entity_id, 'last_triggered') %}
+    {{ last is not none and now() - last > timedelta(seconds=triggerinterval) }}
 - condition: template
   value_template: '{{(new_setpoint - states(currentlimit)|float(0))|abs > 5}}'
 action:
