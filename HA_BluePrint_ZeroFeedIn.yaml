@@ -134,7 +134,7 @@ condition:
 - condition: template
   value_template: |
     {%- set last = state_attr(this.entity_id, 'last_triggered') %}
-    {{ last is not none and now() - last > timedelta(seconds=triggerinterval) }}
+    {{ last is none or (last is not none and (now() - last) > timedelta(seconds=triggerinterval)) }}
 - condition: template
   value_template: '{{(new_setpoint - states(currentlimit)|float(0))|abs > 5}}'
 action:
