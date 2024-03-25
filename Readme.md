@@ -24,6 +24,8 @@ Kudos for the simple algorithm and idea go to:
 https://selbstbau-pv.de/wissensbasis/nulleinspeisung-hoymiles-hm-1500-mit-opendtu-python-steuerung/
 
 # Change log
+**Version: 0.0.4** - Add interval trigger to prevent changes happening to often
+
 **Version: 0.0.3** - Add parameter to define, at which feed in power the controller will get active. Also add parameter to select the control mode
 
 **Version: 0.0.2** - Improve Error handling in case sensors are unavailable
